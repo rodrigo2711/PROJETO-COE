@@ -1,0 +1,47 @@
+from pyModbusTCP.client import ModbusClient
+import numpy as np
+import pyodbc
+import time
+
+dados_conexao =(
+    "Driver={SQL Server};"
+    "Server=PCE-0004\SQLEXPRESS;"
+    "Database=UFVCEI;"
+)
+
+conexao = pyodbc.connect(dados_conexao)
+print("OK")
+
+cursor = conexao.cursor()
+
+server_em = '192.168.163.8'
+porta_em = 502
+ID_em = 2
+cont_em = 0
+
+while(1):
+
+    c_em = ModbusClient(host=server_em,port=porta_em,unit_id=ID_em, auto_open = True, auto_close = True)
+
+
+    ler_em = c_em.read_holding_registers(3, 5)
+    valor_em = np.multiply (ler_em, 0.1)
+    print("ESTAÇÃO SOLARIMÉTRICA \n")
+    print(f'PIRANÔMETRO GHI = {valor_em[0]:.2f} (W/m²)')
+    print(f'PIRANÔMETRO IPOA = {valor_em[1]:.2f} (W/m²)')
+    print(f'ALBEDÔMETRO= {valor_em[2]:.2f} (W/m²)')
+    print(f'TEMP. MÓDULO = {valor_em[3]:.2f} (ºC)')
+    print(f'TEMP. AMBIENTE = {valor_em[4]:.2f} (ºC)')
+
+    GHI = valor_em[0]
+    IPOA = valor_em[1]
+    ALB = valor_em[2]
+    TEMPMOD = valor_em[3]
+    TEMPAMB = valor_em[4]
+
+    comando = f"""INSERT INTO EM(GHI,IPOA,ALB,tempmod,tempamb)
+    VALUES({GHI},{IPOA},{ALB},{TEMPMOD},{TEMPAMB})"""
+
+    cursor.execute(comando)
+    cursor.commit() #NECESSÁRIO PARA UPDATE
+    time.sleep(60)
